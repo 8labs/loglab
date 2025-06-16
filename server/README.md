@@ -1,51 +1,55 @@
-# LogLab Server
+# LogLab .NET Server
 
-A WebSocket server that handles log streaming sessions. It provides a REST API for session creation and WebSocket endpoints for log streaming.
+A .NET implementation of the LogLab server using ASP.NET Core and SignalR for WebSocket support.
+
+## Prerequisites
+
+- .NET 8.0 SDK or later
+- Visual Studio 2022 or Visual Studio Code with C# extensions
+
+## Building and Running
+
+1. Navigate to the server directory:
+   ```bash
+   cd server-dotnet
+   ```
+
+2. Build the project:
+   ```bash
+   dotnet build
+   ```
+
+3. Run the server:
+   ```bash
+   dotnet run
+   ```
+
+The server will start on `http://localhost:5000` by default.
+
+## API Endpoints
+
+### Create Session
+- **URL**: `/api/session`
+- **Method**: `GET`
+- **Response**: 
+  ```json
+  {
+    "session_id": "guid-string"
+  }
+  ```
+
+### WebSocket Connection
+- **URL**: `/ws/{sessionId}`
+- **Protocol**: WebSocket
+- **Events**:
+  - `SendMessage`: Send a message to the server
+  - `ReceiveChatMessage`: Receive a chat message
+  - `ReceivePipeData`: Receive pipe data
 
 ## Features
 
-- REST API endpoint for creating new sessions
-- WebSocket endpoint for streaming logs
-- Session management with unique UUIDs
-- Console output of received logs
-- Automatic session cleanup on disconnect
-
-## Building
-
-```bash
-cargo build --release
-```
-
-The binary will be available at `target/release/loglab-server`
-
-## Running
-
-```bash
-cargo run
-```
-
-The server will start on `http://localhost:8080` with the following endpoints:
-
-- REST API: `GET http://localhost:8080/api/session`
-  - Returns a JSON response with a `session_id`
-- WebSocket: `ws://localhost:8080/ws/{session_id}`
-  - Accepts WebSocket connections for streaming logs
-
-## Usage with LogLab CLI
-
-1. Start the server:
-```bash
-cargo run
-```
-
-2. In another terminal, use the LogLab CLI to stream logs:
-```bash
-tail -f somefile.log | ./loglab
-```
-
-The server will print received logs to the console with their session IDs.
-
-## Requirements
-
-- Rust 1.70 or later
-- Cargo 
+- Session management with unique IDs
+- Real-time WebSocket communication using SignalR
+- Support for both chat messages and pipe data
+- CORS enabled for Vue.js development server
+- Concurrent message handling with thread-safe collections 
