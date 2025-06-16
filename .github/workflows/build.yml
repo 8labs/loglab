@@ -25,15 +25,12 @@ jobs:
 
       - name: Cache dependencies
         uses: Swatinem/rust-cache@v2
+        with:
+          working-directory: cli
 
-      - name: Change to cli directory
-        run: cd cli
-
-      - name: Build binaries in "${{ matrix.BUILD_TARGET }}" mode
-        run: cargo build --profile ${{ matrix.BUILD_TARGET }}
-
-      - name: Run tests
-        run: cargo test --profile ${{ matrix.BUILD_TARGET }}
-
-      - name: Run clippy
-        run: cargo clippy --profile ${{ matrix.BUILD_TARGET }}
+      - name: Build and test
+        working-directory: cli
+        run: |
+          cargo build --profile ${{ matrix.BUILD_TARGET }}
+          cargo test --profile ${{ matrix.BUILD_TARGET }}
+          cargo clippy --profile ${{ matrix.BUILD_TARGET }}
