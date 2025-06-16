@@ -130,7 +130,7 @@ export default {
             placeholder="Type a message..."
             type="text"
           />
-          <button @click="sendMessage">Send</button>
+          <img src="/send.svg" @click="sendMessage" class="send-icon" />
         </div>
       </div>
       <div class="log-section">
@@ -168,16 +168,24 @@ export default {
   flex: 1;
   display: flex;
   flex-direction: column;
-  background: #f5f5f5;
-  border-radius: 8px;
-  overflow: hidden;
+  overflow-y: auto;
+  align-content: flex-end;
+}
+
+.chat-section {
+  font-family: "Gudea", sans-serif;
+}
+
+.log-section {
+  font-family: "Jersey 10", sans-serif;
 }
 
 .chat-messages,
 .log-messages {
   flex: 1;
   overflow-y: auto;
-  padding: 20px;
+  padding: 1rem;
+  margin-bottom: 1rem;
 }
 
 .message {
@@ -205,25 +213,26 @@ export default {
 .chat-input {
   display: flex;
   gap: 10px;
-  padding: 20px;
-  background: #fff;
-  border-top: 1px solid #ddd;
+  border-radius: 4px;
+  border: 1px solid #00bfd3;
+  background-color: #00bfd310;
+  color: #ffffff;
 }
-
-input {
+.chat-input input {
   flex: 1;
   padding: 8px 12px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
   font-size: 14px;
+  background-color: transparent;
+  border: none;
+  color: #ffffff;
 }
 
-button {
-  padding: 8px 16px;
-  background: #007bff;
-  color: white;
-  border: none;
-  border-radius: 4px;
+.chat-input input:focus {
+  outline: none;
+}
+
+.send-icon {
+  padding: 0 0.5rem;
   cursor: pointer;
 }
 

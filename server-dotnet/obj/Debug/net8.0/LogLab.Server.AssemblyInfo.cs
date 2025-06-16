@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("LogLab.Server")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+8835b01805d28264e5a3fb407f0bcc513d893009")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+5c96414594cc4af9cc7f9648a884010aa4947e69")]
 [assembly: System.Reflection.AssemblyProductAttribute("LogLab.Server")]
 [assembly: System.Reflection.AssemblyTitleAttribute("LogLab.Server")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
