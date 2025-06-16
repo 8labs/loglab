@@ -76,18 +76,25 @@ app.Map("/ws/{sessionId}", async context =>
     
     try 
     {
+        // Send message history to the new client
+        await SendMessageHistory(webSocket, channels);
         await HandleWebSocketConnection(webSocket, sessionId, channels);
     }
     finally
     {
         // Remove the client when done
         channels.ConnectedClients.Remove(webSocket);
+        
+        // If this was the last client, clear the history
+        if (channels.ConnectedClients.Count == 0)
+        {
+            channels.ClearHistory();
+        }
     }
 });
 
 // Configure HTTPS
-app.Urls.Add("https://localhost:5001");
-app.Urls.Add("http://localhost:5000");
+app.Urls.Add("https://localhost:6001");
 
 app.Run();
 
@@ -160,12 +167,44 @@ async Task BroadcastMessage(string sessionId, string message)
     }
 }
 
+async Task SendMessageHistory(WebSocket webSocket, SessionChannels channels)
+{
+    // Send pipe message history
+    foreach (var message in channels.PipeMessages)
+    {
+        var messageBytes = Encoding.UTF8.GetBytes($"pipe:{message}");
+        await webSocket.SendAsync(
+            new ArraySegment<byte>(messageBytes),
+            WebSocketMessageType.Text,
+            true,
+            CancellationToken.None);
+    }
+
+    // Send chat message history
+    foreach (var message in channels.ChatMessages)
+    {
+        var messageJson = JsonSerializer.Serialize(message);
+        var messageBytes = Encoding.UTF8.GetBytes(messageJson);
+        await webSocket.SendAsync(
+            new ArraySegment<byte>(messageBytes),
+            WebSocketMessageType.Text,
+            true,
+            CancellationToken.None);
+    }
+}
+
 // Data structures
 public class SessionChannels
 {
     public ConcurrentQueue<string> PipeMessages { get; } = new();
     public ConcurrentQueue<ChatMessage> ChatMessages { get; } = new();
     public HashSet<WebSocket> ConnectedClients { get; } = new();
+
+    public void ClearHistory()
+    {
+        while (PipeMessages.TryDequeue(out _)) { }
+        while (ChatMessages.TryDequeue(out _)) { }
+    }
 }
 
 public class ChatMessage

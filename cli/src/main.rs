@@ -118,7 +118,7 @@ async fn main() -> Result<()> {
         .json()
         .await?;
 
-    println!("Started a new session at http://loglab.8labs.com/{}", session.session_id);
+    println!("Started a new session at https://loglab.8labs.com/{}", session.session_id);
 
     // Connect to WebSocket
     let url = format!("wss://logapi.8labs.com/ws/{}", session.session_id);
