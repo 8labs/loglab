@@ -16,7 +16,7 @@ builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(policy =>
     {
-        policy.WithOrigins("http://localhost:5173") // Vue dev server
+        policy.WithOrigins(["http://localhost:5173", "https://loglab.8labs.com"]) // Vue dev server
               .AllowAnyHeader()
               .AllowAnyMethod()
               .AllowCredentials();
