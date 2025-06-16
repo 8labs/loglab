@@ -26,7 +26,8 @@ jobs:
       - name: Cache dependencies
         uses: Swatinem/rust-cache@v2
         with:
-          working-directory: cli
+          cache-directories: cli/target
+          cache-targets: cli
 
       - name: Build and test
         working-directory: cli
