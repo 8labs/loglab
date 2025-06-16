@@ -13,8 +13,27 @@ jobs:
       matrix:
         os: [macos-latest, ubuntu-latest, windows-latest]
         BUILD_TARGET: [release] # refers to a cargo profile
+
     steps:
       - name: Check out Git repository
         uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Cache dependencies
+        uses: Swatinem/rust-cache@v2
+
+      - name: Change to cli directory
+        run: cd cli
+
       - name: Build binaries in "${{ matrix.BUILD_TARGET }}" mode
         run: cargo build --profile ${{ matrix.BUILD_TARGET }}
+
+      - name: Run tests
+        run: cargo test --profile ${{ matrix.BUILD_TARGET }}
+
+      - name: Run clippy
+        run: cargo clippy --profile ${{ matrix.BUILD_TARGET }}
