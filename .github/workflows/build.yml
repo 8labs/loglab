@@ -35,3 +35,14 @@ jobs:
           cargo build --profile ${{ matrix.BUILD_TARGET }}
           cargo test --profile ${{ matrix.BUILD_TARGET }}
           cargo clippy --profile ${{ matrix.BUILD_TARGET }}
+
+      - name: Create Release
+        if: matrix.os == 'ubuntu-latest' # Only create release once
+        uses: softprops/action-gh-release@v1
+        with:
+          draft: true
+          generate_release_notes: true
+          files: |
+            cli/target/release/loglab
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
