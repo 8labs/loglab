@@ -30,7 +30,7 @@ export default {
       }
 
       // Connect to WebSocket
-      ws.value = new WebSocket(`wss://localhost:5001/ws/${sessionId.value}`);
+      ws.value = new WebSocket(`wss://logapi.8labs.com/ws/${sessionId.value}`);
 
       ws.value.onmessage = (event) => {
         const data = event.data;
@@ -42,12 +42,12 @@ export default {
             scrollToBottom(chatMessagesRef);
           } else {
             // Handle pipe data
-            logMessages.value.push(data);
+            logMessages.value.push(data.substring(5));
             scrollToBottom(logMessagesRef);
           }
         } catch (e) {
           // If not JSON, treat as pipe data
-          logMessages.value.push(data);
+          logMessages.value.push(data.substring(5));
           scrollToBottom(logMessagesRef);
         }
       };
