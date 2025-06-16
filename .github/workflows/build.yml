@@ -38,10 +38,11 @@ jobs:
 
       - name: Prepare binary
         working-directory: cli
+        shell: bash
         run: |
-          if [ "${{ matrix.os }}" = "windows-latest" ]; then
+          if [[ "${{ matrix.os }}" == "windows-latest" ]]; then
             cp target/release/loglab.exe loglab-win.exe
-          elif [ "${{ matrix.os }}" = "macos-latest" ]; then
+          elif [[ "${{ matrix.os }}" == "macos-latest" ]]; then
             cp target/release/loglab loglab-mac
           else
             cp target/release/loglab loglab-ubuntu
