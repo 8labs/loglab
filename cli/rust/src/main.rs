@@ -118,7 +118,8 @@ async fn main() -> Result<()> {
         .json()
         .await?;
 
-    println!("Got session ID: {}", session.session_id);
+    println!("Started a new session at http://localhost:5173/
+    {}", session.session_id);
 
     // Connect to WebSocket
     let url = format!("wss://localhost:5001/ws/{}", session.session_id);

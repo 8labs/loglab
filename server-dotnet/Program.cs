@@ -6,11 +6,12 @@ using Microsoft.AspNetCore.SignalR;
 using System.Collections.Concurrent;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Net.WebSockets;
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container
-builder.Services.AddSignalR();
 builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(policy =>
@@ -32,6 +33,12 @@ if (app.Environment.IsDevelopment())
 
 app.UseCors();
 
+// Enable WebSocket support
+app.UseWebSockets(new WebSocketOptions
+{
+    KeepAliveInterval = TimeSpan.FromMinutes(2)
+});
+
 // Store active sessions
 var sessions = new ConcurrentDictionary<string, SessionChannels>();
 
@@ -45,7 +52,38 @@ app.MapGet("/api/session", () =>
 });
 
 // WebSocket endpoint for streaming logs and chat
-app.MapHub<LogHub>("/ws/{sessionId}");
+app.Map("/ws/{sessionId}", async context =>
+{
+    if (!context.WebSockets.IsWebSocketRequest)
+    {
+        context.Response.StatusCode = 400;
+        return;
+    }
+
+    var sessionId = context.Request.RouteValues["sessionId"]?.ToString();
+    if (string.IsNullOrEmpty(sessionId))
+    {
+        context.Response.StatusCode = 400;
+        return;
+    }
+
+    // Create session if it doesn't exist
+    var channels = sessions.GetOrAdd(sessionId, _ => new SessionChannels());
+
+    using var webSocket = await context.WebSockets.AcceptWebSocketAsync();
+    // Add the client to the session's connected clients
+    channels.ConnectedClients.Add(webSocket);
+    
+    try 
+    {
+        await HandleWebSocketConnection(webSocket, sessionId, channels);
+    }
+    finally
+    {
+        // Remove the client when done
+        channels.ConnectedClients.Remove(webSocket);
+    }
+});
 
 // Configure HTTPS
 app.Urls.Add("https://localhost:5001");
@@ -53,82 +91,71 @@ app.Urls.Add("http://localhost:5000");
 
 app.Run();
 
-// Hub for handling WebSocket connections
-public class LogHub : Microsoft.AspNetCore.SignalR.Hub
+async Task HandleWebSocketConnection(WebSocket webSocket, string sessionId, SessionChannels channels)
 {
-    private readonly ILogger<LogHub> _logger;
-    private static readonly ConcurrentDictionary<string, SessionChannels> _sessions = new();
+    var buffer = new byte[1024 * 4];
+    var receiveResult = await webSocket.ReceiveAsync(
+        new ArraySegment<byte>(buffer), CancellationToken.None);
 
-    public LogHub(ILogger<LogHub> logger)
+    while (!receiveResult.CloseStatus.HasValue)
     {
-        _logger = logger;
-    }
-
-    public override async Task OnConnectedAsync()
-    {
-        var sessionId = Context.GetHttpContext()?.Request.RouteValues["sessionId"]?.ToString();
-        if (string.IsNullOrEmpty(sessionId))
+        if (receiveResult.MessageType == WebSocketMessageType.Text)
         {
-            Context.Abort();
-            return;
-        }
-
-        // Create session if it doesn't exist
-        var channels = _sessions.GetOrAdd(sessionId, _ => new SessionChannels());
-        
-        // Add connection to group
-        await Groups.AddToGroupAsync(Context.ConnectionId, sessionId);
-        _logger.LogInformation("Client connected to session {SessionId}", sessionId);
-
-        await base.OnConnectedAsync();
-    }
-
-    public override async Task OnDisconnectedAsync(Exception? exception)
-    {
-        var sessionId = Context.GetHttpContext()?.Request.RouteValues["sessionId"]?.ToString();
-        if (!string.IsNullOrEmpty(sessionId))
-        {
-            await Groups.RemoveFromGroupAsync(Context.ConnectionId, sessionId);
-            _logger.LogInformation("Client disconnected from session {SessionId}", sessionId);
-        }
-
-        await base.OnDisconnectedAsync(exception);
-    }
-
-    public async Task SendMessage(string message)
-    {
-        var sessionId = Context.GetHttpContext()?.Request.RouteValues["sessionId"]?.ToString();
-        if (string.IsNullOrEmpty(sessionId) || !_sessions.TryGetValue(sessionId, out var channels))
-        {
-            return;
-        }
-
-        try
-        {
-            // Try to parse as chat message
-            var chatMessage = JsonSerializer.Deserialize<ChatMessage>(message);
-            if (chatMessage != null)
+            var message = Encoding.UTF8.GetString(buffer, 0, receiveResult.Count);
+            
+            try
             {
-                // Store chat message
-                channels.ChatMessages.Enqueue(chatMessage);
-                // Broadcast chat message to all clients in the session
-                await Clients.Group(sessionId).SendAsync("ReceiveChatMessage", chatMessage);
+                // Try to parse as chat message
+                var chatMessage = JsonSerializer.Deserialize<ChatMessage>(message);
+                if (chatMessage != null)
+                {
+                    // Store chat message
+                    channels.ChatMessages.Enqueue(chatMessage);
+                    // Broadcast chat message to all clients in the session
+                    var chatJson = JsonSerializer.Serialize(chatMessage);
+                    await BroadcastMessage(sessionId, chatJson);
+                }
+                else
+                {
+                    // Store pipe data
+                    channels.PipeMessages.Enqueue(message);
+                    // Broadcast pipe data to all clients in the session with "pipe:" prefix
+                    await BroadcastMessage(sessionId, $"pipe:{message}");
+                }
             }
-            else
+            catch (JsonException)
             {
-                // Store pipe data
+                // If not a valid JSON, treat as pipe data
                 channels.PipeMessages.Enqueue(message);
-                // Broadcast pipe data to all clients in the session
-                _logger.LogInformation("[Session {SessionId}] Received pipe data: {Message}", sessionId, message);
-                await Clients.Group(sessionId).SendAsync("ReceivePipeData", message);
+                await BroadcastMessage(sessionId, $"pipe:{message}");
             }
         }
-        catch (JsonException)
+
+        receiveResult = await webSocket.ReceiveAsync(
+            new ArraySegment<byte>(buffer), CancellationToken.None);
+    }
+
+    await webSocket.CloseAsync(
+        receiveResult.CloseStatus.Value,
+        receiveResult.CloseStatusDescription,
+        CancellationToken.None);
+}
+
+async Task BroadcastMessage(string sessionId, string message)
+{
+    if (sessions.TryGetValue(sessionId, out var channels))
+    {
+        var messageBytes = Encoding.UTF8.GetBytes(message);
+        foreach (var client in channels.ConnectedClients)
         {
-            // If not a valid JSON, treat as pipe data
-            channels.PipeMessages.Enqueue(message);
-            _logger.LogInformation("[Session {SessionId}] Received pipe data: {Message}", sessionId, message);
-            await Clients.Group(sessionId).SendAsync("ReceivePipeData", message);
+            if (client.State == WebSocketState.Open)
+            {
+                await client.SendAsync(
+                    new ArraySegment<byte>(messageBytes),
+                    WebSocketMessageType.Text,
+                    true,
+                    CancellationToken.None);
+            }
         }
     }
 }
@@ -138,6 +165,7 @@ public class SessionChannels
 {
     public ConcurrentQueue<string> PipeMessages { get; } = new();
     public ConcurrentQueue<ChatMessage> ChatMessages { get; } = new();
+    public HashSet<WebSocket> ConnectedClients { get; } = new();
 }
 
 public class ChatMessage

@@ -25,10 +25,6 @@ export default {
       ) {
         sessionId.value = urlSessionId;
       } else {
-        // Create new session if no valid ID in URL
-        const response = await fetch("https://localhost:5001/api/session");
-        const data = await response.json();
-        sessionId.value = data.session_id;
         // Update URL with new session ID
         window.history.replaceState({}, "", `/${sessionId.value}`);
       }

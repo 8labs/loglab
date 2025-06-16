@@ -23,3 +23,4 @@
 /Users/jgraham/Documents/code/8labs/loglab/server-dotnet/obj/Debug/net8.0/LogLab.Server.pdb
 /Users/jgraham/Documents/code/8labs/loglab/server-dotnet/obj/Debug/net8.0/LogLab.Server.genruntimeconfig.cache
 /Users/jgraham/Documents/code/8labs/loglab/server-dotnet/obj/Debug/net8.0/ref/LogLab.Server.dll
+/Users/jgraham/Documents/code/8labs/loglab/server-dotnet/obj/Debug/net8.0/LogLab.Server.sourcelink.json
