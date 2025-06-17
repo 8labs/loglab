@@ -112,7 +112,7 @@ async fn main() -> Result<()> {
     // Get session ID from REST API
     let client = reqwest::Client::new();
     let session: SessionResponse = client
-        .get("https://localhost:6001/api/session")
+        .get("https://logapi.8labs.com/api/session")
         .send()
         .await?
         .json()
@@ -121,7 +121,7 @@ async fn main() -> Result<()> {
     println!("Got a new session id.");
 
     // Connect to WebSocket
-    let url = format!("wss://localhost:6001/ws/{}", session.session_id);
+    let url = format!("wss://logapi.8labs.com/ws/{}", session.session_id);
     let url = url.parse::<Url>()?;
     let (ws_stream, _) = connect_async(url).await?;
     let (write, _) = ws_stream.split();

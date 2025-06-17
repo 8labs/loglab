@@ -1,5 +1,5 @@
 <script>
-import { ref, onMounted, nextTick, onUnmounted, watch } from "vue";
+import { ref, onMounted, nextTick, onUnmounted, watch, computed } from "vue";
 
 export default {
   name: "LogBox",
@@ -21,6 +21,34 @@ export default {
     const popupPosition = ref({ x: 0, y: 0 });
     const showPopup = ref(false);
     const highlightedLines = ref(new Set());
+    const filterText = ref("");
+    const useRegex = ref(false);
+    const filterError = ref("");
+
+    // Computed property for filtered messages
+    const filteredMessages = computed(() => {
+      if (!filterText.value) return props.messages;
+
+      try {
+        if (useRegex.value) {
+          const regex = new RegExp(filterText.value);
+          return props.messages.filter((msg) => regex.test(msg.content));
+        } else {
+          const searchText = filterText.value.toLowerCase();
+          return props.messages.filter((msg) =>
+            msg.content.toLowerCase().includes(searchText)
+          );
+        }
+      } catch (e) {
+        filterError.value = "Invalid regular expression";
+        return props.messages;
+      }
+    });
+
+    // Watch for filter changes to clear error
+    watch(filterText, () => {
+      filterError.value = "";
+    });
 
     const scrollToBottom = async () => {
       await nextTick();
@@ -36,7 +64,19 @@ export default {
         return;
       }
 
+      // Check if selection is within log messages
+      const logMessagesElement = logMessagesRef.value;
+      if (!logMessagesElement) {
+        showPopup.value = false;
+        return;
+      }
+
       const range = selection.getRangeAt(0);
+      if (!logMessagesElement.contains(range.commonAncestorContainer)) {
+        showPopup.value = false;
+        return;
+      }
+
       const rect = range.getBoundingClientRect();
 
       // Position popup below the selection
@@ -135,6 +175,10 @@ export default {
       popupPosition,
       handleHighlight,
       highlightedLines,
+      filterText,
+      useRegex,
+      filterError,
+      filteredMessages,
     };
   },
 };
@@ -142,9 +186,28 @@ export default {
 
 <template>
   <div class="log-section">
+    <div class="filter-container">
+      <div class="filter-input-group">
+        <input
+          v-model="filterText"
+          placeholder="Filter logs"
+          type="text"
+          class="filter-input"
+        />
+        <label
+          class="regex-toggle"
+          :class="{ active: useRegex }"
+          @click="useRegex = !useRegex"
+          title="Regular Expressions"
+        >
+          .*
+        </label>
+      </div>
+      <div v-if="filterError" class="filter-error">{{ filterError }}</div>
+    </div>
     <div class="log-messages" ref="logMessagesRef">
       <div
-        v-for="(log, index) in messages"
+        v-for="(log, index) in filteredMessages"
         :key="log.id || index"
         class="log-line"
         :data-index="index"
@@ -234,5 +297,51 @@ export default {
   100% {
     background-color: #00bfd320;
   }
+}
+
+.filter-container {
+  padding: 0.5rem;
+  background: #001d27;
+}
+
+.filter-input-group {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  padding: 0.5rem;
+  border-radius: 4px;
+  border: 1px solid #00bfd3;
+}
+
+.filter-input {
+  flex: 1;
+  border: none;
+  padding: 0;
+  background: #001d27;
+  color: #ffffff;
+}
+
+.filter-input:focus {
+  outline: none;
+}
+
+.regex-toggle {
+  font-family: "Gudea", sans-serif;
+  color: #ffffff;
+  font-size: 1rem;
+  padding: 0 0.25rem;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.regex-toggle.active {
+  background-color: #00bfd3;
+  color: #ffffff;
+}
+
+.filter-error {
+  color: #ff6b6b;
+  font-size: 0.75rem;
+  margin-top: 0.25rem;
 }
 </style> 
