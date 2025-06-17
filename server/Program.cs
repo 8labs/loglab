@@ -8,6 +8,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Net.WebSockets;
 using System.Text;
+using LogLab.Server;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -45,7 +46,7 @@ var sessions = new ConcurrentDictionary<string, SessionChannels>();
 // REST API endpoint for creating a new session
 app.MapGet("/api/session", () =>
 {
-    var sessionId = Guid.NewGuid().ToString();
+    var sessionId = SessionIdGenerator.GenerateId();
     var channels = new SessionChannels();
     sessions.TryAdd(sessionId, channels);
     return Results.Json(new { session_id = sessionId });

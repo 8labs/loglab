@@ -25,12 +25,7 @@ export default {
       const path = window.location.pathname;
       const urlSessionId = path.split("/").pop();
 
-      if (
-        urlSessionId &&
-        urlSessionId.match(
-          /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-        )
-      ) {
+      if (urlSessionId) {
         sessionId.value = urlSessionId;
       } else {
         // Update URL with new session ID
