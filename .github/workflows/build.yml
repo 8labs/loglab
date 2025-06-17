@@ -11,7 +11,7 @@ jobs:
 
     strategy:
       matrix:
-        os: [macos-latest, ubuntu-latest, ubuntu-24.04-arm64, windows-latest]
+        os: [macos-latest, ubuntu-latest, ubuntu-24.04-arm, windows-latest]
         BUILD_TARGET: [release] # refers to a cargo profile
 
     steps:
@@ -44,7 +44,7 @@ jobs:
               cp target/release/loglab.exe loglab-win.exe
             elif [[ "${{ matrix.os }}" == "macos-latest" ]]; then
               cp target/release/loglab loglab-mac
-            elif [[ "${{ matrix.os }}" == "ubuntu-24.04-arm64" ]]; then
+            elif [[ "${{ matrix.os }}" == "ubuntu-24.04-arm" ]]; then
               cp target/release/loglab loglab-ubuntu-arm
           else
             cp target/release/loglab loglab-ubuntu
