@@ -1,15 +1,18 @@
 <script>
-import { ref, onMounted, onUnmounted, nextTick } from "vue";
+import { ref, onMounted, onUnmounted } from "vue";
+import ChatBox from "./components/ChatBox.vue";
+import LogBox from "./components/LogBox.vue";
 
 export default {
   name: "App",
+  components: {
+    ChatBox,
+    LogBox,
+  },
   setup() {
     const ws = ref(null);
     const chatMessages = ref([]);
     const logMessages = ref([]);
-    const newMessage = ref("");
-    const chatMessagesRef = ref(null);
-    const logMessagesRef = ref(null);
     const sessionId = ref("");
 
     const connectWebSocket = async () => {
@@ -39,16 +42,13 @@ export default {
           if (message.sender && message.content && message.timestamp) {
             // Handle chat message
             chatMessages.value.push(message);
-            scrollToBottom(chatMessagesRef);
           } else {
             // Handle pipe data
             logMessages.value.push(data.substring(5));
-            scrollToBottom(logMessagesRef);
           }
         } catch (e) {
           // If not JSON, treat as pipe data
           logMessages.value.push(data.substring(5));
-          scrollToBottom(logMessagesRef);
         }
       };
 
@@ -61,32 +61,18 @@ export default {
       };
     };
 
-    const sendMessage = () => {
-      if (!newMessage.value.trim()) return;
-
-      const message = {
-        sender: "User", // You might want to make this configurable
-        content: newMessage.value,
+    const handleSendMessage = (message) => {
+      const chatMessage = {
+        sender: "User",
+        content: message,
         timestamp: Date.now(),
       };
 
       if (ws.value && ws.value.readyState === WebSocket.OPEN) {
-        ws.value.send(JSON.stringify(message));
-        newMessage.value = "";
+        ws.value.send(JSON.stringify(chatMessage));
       } else {
         console.error("WebSocket is not connected");
       }
-    };
-
-    const scrollToBottom = async (element) => {
-      await nextTick();
-      if (element.value) {
-        element.value.scrollTop = element.value.scrollHeight;
-      }
-    };
-
-    const formatTime = (timestamp) => {
-      return new Date(timestamp).toLocaleTimeString();
     };
 
     onMounted(() => {
@@ -102,11 +88,7 @@ export default {
     return {
       chatMessages,
       logMessages,
-      newMessage,
-      chatMessagesRef,
-      logMessagesRef,
-      sendMessage,
-      formatTime,
+      handleSendMessage,
     };
   },
 };
@@ -115,35 +97,8 @@ export default {
 <template>
   <div class="app">
     <div class="container">
-      <div class="chat-section">
-        <div class="chat-messages" ref="chatMessagesRef">
-          <div v-for="msg in chatMessages" :key="msg.timestamp" class="message">
-            <span class="timestamp">{{ formatTime(msg.timestamp) }}</span>
-            <span class="sender">{{ msg.sender }}:</span>
-            <span class="content">{{ msg.content }}</span>
-          </div>
-        </div>
-        <div class="chat-input">
-          <input
-            v-model="newMessage"
-            @keyup.enter="sendMessage"
-            placeholder="Type a message..."
-            type="text"
-          />
-          <img src="/send.svg" @click="sendMessage" class="send-icon" />
-        </div>
-      </div>
-      <div class="log-section">
-        <div class="log-messages" ref="logMessagesRef">
-          <div
-            v-for="(log, index) in logMessages"
-            :key="index"
-            class="log-line"
-          >
-            {{ log }}
-          </div>
-        </div>
-      </div>
+      <ChatBox :messages="chatMessages" @send-message="handleSendMessage" />
+      <LogBox :messages="logMessages" />
     </div>
   </div>
 </template>
@@ -161,82 +116,5 @@ export default {
   gap: 2rem;
   height: 100%;
   width: 100%;
-}
-
-.chat-section,
-.log-section {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  overflow-y: auto;
-  align-content: flex-end;
-}
-
-.chat-section {
-  font-family: "Gudea", sans-serif;
-}
-
-.log-section {
-  font-family: "Jersey 10", sans-serif;
-}
-
-.chat-messages,
-.log-messages {
-  flex: 1;
-  overflow-y: auto;
-  padding: 1rem;
-  margin-bottom: 1rem;
-}
-
-.message {
-  margin-bottom: 10px;
-  line-height: 1.4;
-}
-
-.timestamp {
-  color: #666;
-  font-size: 0.8em;
-  margin-right: 8px;
-}
-
-.sender {
-  font-weight: bold;
-  margin-right: 8px;
-}
-
-.log-line {
-  font-family: monospace;
-  margin-bottom: 4px;
-  white-space: pre-wrap;
-}
-
-.chat-input {
-  display: flex;
-  gap: 10px;
-  border-radius: 4px;
-  border: 1px solid #00bfd3;
-  background-color: #00bfd310;
-  color: #ffffff;
-}
-.chat-input input {
-  flex: 1;
-  padding: 8px 12px;
-  font-size: 14px;
-  background-color: transparent;
-  border: none;
-  color: #ffffff;
-}
-
-.chat-input input:focus {
-  outline: none;
-}
-
-.send-icon {
-  padding: 0 0.5rem;
-  cursor: pointer;
-}
-
-button:hover {
-  background: #0056b3;
 }
 </style>
