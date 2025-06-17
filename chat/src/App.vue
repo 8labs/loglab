@@ -15,6 +15,8 @@ export default {
     const logMessages = ref([]);
     const sessionId = ref("");
     const highlights = ref([]);
+    const username = ref("");
+    const showUsernameDialog = ref(true);
 
     const connectWebSocket = async () => {
       // Get session ID from URL
@@ -64,7 +66,7 @@ export default {
 
     const handleSendMessage = (message) => {
       const chatMessage = {
-        sender: "User",
+        sender: username.value,
         content: message,
         timestamp: Date.now(),
       };
@@ -117,8 +119,21 @@ export default {
       }
     };
 
+    const handleJoin = () => {
+      if (username.value.trim()) {
+        showUsernameDialog.value = false;
+        connectWebSocket();
+      }
+    };
+
     onMounted(() => {
-      connectWebSocket();
+      // Check if username exists in localStorage
+      const savedUsername = localStorage.getItem("username");
+      if (savedUsername) {
+        username.value = savedUsername;
+        showUsernameDialog.value = false;
+        connectWebSocket();
+      }
     });
 
     onUnmounted(() => {
@@ -131,9 +146,12 @@ export default {
       chatMessages,
       logMessages,
       highlights,
+      username,
+      showUsernameDialog,
       handleSendMessage,
       handleHighlight,
       handleScrollToHighlight,
+      handleJoin,
     };
   },
 };
@@ -141,7 +159,21 @@ export default {
 
 <template>
   <div class="app">
-    <div class="container">
+    <div v-if="showUsernameDialog" class="username-dialog-overlay">
+      <div class="username-dialog">
+        <div class="input-group">
+          <input
+            v-model="username"
+            @keyup.enter="handleJoin"
+            placeholder="Username"
+            type="text"
+            autofocus
+          />
+          <button @click="handleJoin" :disabled="!username.trim()">Join</button>
+        </div>
+      </div>
+    </div>
+    <div v-else class="container">
       <ChatBox
         :messages="chatMessages"
         :highlights="highlights"
@@ -170,5 +202,74 @@ export default {
   gap: 2rem;
   height: 100%;
   width: 100%;
+}
+
+.username-dialog-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.username-dialog {
+  background: #001d27;
+
+  border-radius: 8px;
+  padding: 2rem;
+  width: 100%;
+  max-width: 400px;
+}
+
+.username-dialog h2 {
+  color: #ffffff;
+  margin: 0 0 1.5rem 0;
+  text-align: center;
+  font-size: 1.25rem;
+}
+
+.input-group {
+  display: flex;
+  gap: 1rem;
+}
+
+.input-group input {
+  flex: 1;
+  padding: 0.75rem;
+  border: 1px solid #00bfd3;
+  border-radius: 4px;
+  background: #001d27;
+  color: #ffffff;
+  font-size: 1rem;
+}
+
+.input-group input:focus {
+  outline: none;
+  border-color: #00bfd3;
+  box-shadow: 0 0 0 2px rgba(0, 191, 211, 0.2);
+}
+
+.input-group button {
+  padding: 0.75rem 1.5rem;
+  border: 1px solid #00bfd3;
+  border-radius: 4px;
+  background: #00bfd310;
+  color: #ffffff;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.input-group button:hover:not(:disabled) {
+  background: #00bfd320;
+}
+
+.input-group button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 </style>
