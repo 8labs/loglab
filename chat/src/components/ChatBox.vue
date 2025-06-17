@@ -44,15 +44,20 @@ export default {
     };
 
     const formatMessageContent = (message) => {
-      if (message.sender === "System" && message.highlightId) {
-        const highlight = props.highlights.find(
-          (h) => h.id === message.highlightId
-        );
-        if (highlight) {
-          return `${message.content} <a href="#" data-highlight-id="${highlight.id}">[View Highlight]</a>`;
-        }
+      switch (message.type) {
+        case "join":
+          return `<span class="join-message">${message.content}</span>`;
+        case "highlight":
+          const highlight = props.highlights.find(
+            (h) => h.id === message.highlightInfo?.highlightId
+          );
+          if (highlight) {
+            return `Highlighted: "${message.content}" <a href="#" data-highlight-id="${message.highlightInfo.highlightId}">[View Highlight]</a>`;
+          }
+          return message.content;
+        default:
+          return message.content;
       }
-      return message.content;
     };
 
     onMounted(() => {
@@ -127,6 +132,11 @@ export default {
 .sender {
   font-weight: bold;
   margin-right: 8px;
+}
+
+:deep(.join-message) {
+  color: #666;
+  font-style: italic;
 }
 
 :deep(a) {

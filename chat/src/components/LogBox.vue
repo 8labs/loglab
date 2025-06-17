@@ -54,9 +54,13 @@ export default {
       if (!selection.rangeCount) return;
 
       const range = selection.getRangeAt(0);
-      const lineIndex = parseInt(
-        range.startContainer.parentElement.dataset.index
-      );
+      const lineElement = range.startContainer.parentElement;
+      const lineIndex = lineElement.dataset.messageId;
+      const logMessageId = lineElement.dataset.messageId;
+
+      // Calculate start and end positions within the log message
+      const startPosition = range.startOffset;
+      const endPosition = range.endOffset;
 
       // Create highlight span
       const highlightId = `highlight-${Date.now()}`;
@@ -66,13 +70,16 @@ export default {
       range.surroundContents(span);
 
       // Add to highlighted lines
-      highlightedLines.value.add(lineIndex);
+      highlightedLines.value.add(lineElement.dataset.messageId);
 
       // Emit highlight event
       emit("highlight", {
         text: selectedText.value,
         highlightId,
         lineIndex,
+        logMessageId,
+        startPosition,
+        endPosition,
       });
 
       // Clear selection and hide popup
@@ -87,15 +94,24 @@ export default {
         if (newHighlights.length > 0) {
           const latestHighlight = newHighlights[newHighlights.length - 1];
           const lineElement = document.querySelector(
-            `.log-line[data-index="${latestHighlight.lineIndex}"]`
+            `.log-line[data-message-id="${latestHighlight.logMessageId}"]`
           );
           if (lineElement) {
-            const text = lineElement.textContent;
-            const index = text.indexOf(latestHighlight.text);
-            if (index !== -1) {
-              const before = text.substring(0, index);
-              const after = text.substring(index + latestHighlight.text.length);
-              lineElement.innerHTML = `${before}<span class="highlight" id="${latestHighlight.id}">${latestHighlight.text}</span>${after}`;
+            // Get the text content before any highlights were applied
+            const originalText = lineElement.textContent;
+            const before = originalText.substring(
+              0,
+              latestHighlight.startPosition
+            );
+            const after = originalText.substring(latestHighlight.endPosition);
+            const highlightedText = originalText.substring(
+              latestHighlight.startPosition,
+              latestHighlight.endPosition
+            );
+
+            // Only apply the highlight if it hasn't been applied yet
+            if (!lineElement.querySelector(`#${latestHighlight.id}`)) {
+              lineElement.innerHTML = `${before}<span class="highlight" id="${latestHighlight.id}">${highlightedText}</span>${after}`;
             }
           }
         }
@@ -129,12 +145,12 @@ export default {
     <div class="log-messages" ref="logMessagesRef">
       <div
         v-for="(log, index) in messages"
-        :key="index"
+        :key="log.id || index"
         class="log-line"
         :data-index="index"
-      >
-        <span v-html="log"></span>
-      </div>
+        :data-message-id="log.id"
+        v-html="log.content"
+      ></div>
     </div>
 
     <!-- Highlight Popup -->

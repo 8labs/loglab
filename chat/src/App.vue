@@ -18,6 +18,8 @@ export default {
     const username = ref("");
     const showUsernameDialog = ref(true);
 
+    const websocket = import.meta.env.VITE_WEBSOCKET_URL;
+
     const connectWebSocket = async () => {
       // Get session ID from URL
       const path = window.location.pathname;
@@ -36,7 +38,7 @@ export default {
       }
 
       // Connect to WebSocket
-      ws.value = new WebSocket(`wss://logapi.8labs.com/ws/${sessionId.value}`);
+      ws.value = new WebSocket(`${websocket}/ws/${sessionId.value}`);
 
       ws.value.onmessage = (event) => {
         const data = event.data;
@@ -45,13 +47,25 @@ export default {
           if (message.sender && message.content && message.timestamp) {
             // Handle chat message
             chatMessages.value.push(message);
+
+            // If it's a highlight message, add to highlights array
+            if (message.type === "highlight" && message.highlightInfo) {
+              highlights.value.push({
+                id: message.highlightInfo.highlightId,
+                text: message.content,
+                logMessageId: message.highlightInfo.logMessageId,
+                startPosition: message.highlightInfo.startPosition,
+                endPosition: message.highlightInfo.endPosition,
+                timestamp: message.timestamp,
+              });
+            }
           } else {
             // Handle pipe data
-            logMessages.value.push(data.substring(5));
+            logMessages.value.push(JSON.parse(data));
           }
         } catch (e) {
           // If not JSON, treat as pipe data
-          logMessages.value.push(data.substring(5));
+          logMessages.value.push(JSON.parse(data));
         }
       };
 
@@ -62,11 +76,23 @@ export default {
       ws.value.onerror = (error) => {
         console.error("WebSocket error:", error);
       };
+
+      // Send join message when connection is established
+      ws.value.onopen = () => {
+        const joinMessage = {
+          sender: username.value,
+          type: "join",
+          content: `${username.value} joined the chat`,
+          timestamp: Date.now(),
+        };
+        ws.value.send(JSON.stringify(joinMessage));
+      };
     };
 
     const handleSendMessage = (message) => {
       const chatMessage = {
         sender: username.value,
+        type: "msg",
         content: message,
         timestamp: Date.now(),
       };
@@ -78,21 +104,37 @@ export default {
       }
     };
 
-    const handleHighlight = ({ text, highlightId, lineIndex }) => {
+    const handleHighlight = ({
+      text,
+      highlightId,
+      lineIndex,
+      logMessageId,
+      startPosition,
+      endPosition,
+    }) => {
       // Add to highlights array
       const highlight = {
         id: highlightId,
         text,
         lineIndex,
+        logMessageId,
+        startPosition,
+        endPosition,
         timestamp: Date.now(),
       };
       highlights.value.push(highlight);
 
-      // Send system message
+      // Send highlight message
       const message = {
-        sender: "System",
-        content: `Highlighted text: "${text}"`,
-        highlightId,
+        sender: username.value,
+        type: "highlight",
+        content: text,
+        highlightInfo: {
+          logMessageId,
+          startPosition,
+          endPosition,
+          highlightId,
+        },
         timestamp: Date.now(),
       };
 
@@ -122,6 +164,9 @@ export default {
     const handleJoin = () => {
       if (username.value.trim()) {
         showUsernameDialog.value = false;
+        // Save username to localStorage
+        localStorage.setItem("username", username.value);
+        // Connect to WebSocket
         connectWebSocket();
       }
     };

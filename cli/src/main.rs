@@ -112,19 +112,21 @@ async fn main() -> Result<()> {
     // Get session ID from REST API
     let client = reqwest::Client::new();
     let session: SessionResponse = client
-        .get("https://logapi.8labs.com/api/session")
+        .get("https://localhost:6001/api/session")
         .send()
         .await?
         .json()
         .await?;
 
-    println!("Started a new session at https://loglab.8labs.com/{}", session.session_id);
+    println!("Got a new session id.");
 
     // Connect to WebSocket
-    let url = format!("wss://logapi.8labs.com/ws/{}", session.session_id);
+    let url = format!("wss://localhost:6001/ws/{}", session.session_id);
     let url = url.parse::<Url>()?;
     let (ws_stream, _) = connect_async(url).await?;
     let (write, _) = ws_stream.split();
+
+    println!("Started a new session at https://loglab.8labs.com/{}", session.session_id);
 
     // Handle input based on whether a file was specified
     match args.file {

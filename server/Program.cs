@@ -124,17 +124,21 @@ async Task HandleWebSocketConnection(WebSocket webSocket, string sessionId, Sess
                 }
                 else
                 {
-                    // Store pipe data
-                    channels.PipeMessages.Enqueue(message);
-                    // Broadcast pipe data to all clients in the session with "pipe:" prefix
-                    await BroadcastMessage(sessionId, $"pipe:{message}");
+                    // Create and store log message
+                    var logMessage = new LogMessage { Content = message };
+                    channels.PipeMessages.Enqueue(logMessage);
+                    // Broadcast log message to all clients in the session
+                    var logJson = JsonSerializer.Serialize(logMessage);
+                    await BroadcastMessage(sessionId, $"{logJson}");
                 }
             }
             catch (JsonException)
             {
                 // If not a valid JSON, treat as pipe data
-                channels.PipeMessages.Enqueue(message);
-                await BroadcastMessage(sessionId, $"pipe:{message}");
+                var logMessage = new LogMessage { Content = message };
+                channels.PipeMessages.Enqueue(logMessage);
+                var logJson = JsonSerializer.Serialize(logMessage);
+                await BroadcastMessage(sessionId, $"{logJson}");
             }
         }
 
@@ -172,7 +176,8 @@ async Task SendMessageHistory(WebSocket webSocket, SessionChannels channels)
     // Send pipe message history
     foreach (var message in channels.PipeMessages)
     {
-        var messageBytes = Encoding.UTF8.GetBytes($"pipe:{message}");
+        var messageJson = JsonSerializer.Serialize(message);
+        var messageBytes = Encoding.UTF8.GetBytes($"{messageJson}");
         await webSocket.SendAsync(
             new ArraySegment<byte>(messageBytes),
             WebSocketMessageType.Text,
@@ -196,7 +201,7 @@ async Task SendMessageHistory(WebSocket webSocket, SessionChannels channels)
 // Data structures
 public class SessionChannels
 {
-    public ConcurrentQueue<string> PipeMessages { get; } = new();
+    public ConcurrentQueue<LogMessage> PipeMessages { get; } = new();
     public ConcurrentQueue<ChatMessage> ChatMessages { get; } = new();
     public HashSet<WebSocket> ConnectedClients { get; } = new();
 
@@ -211,8 +216,43 @@ public class ChatMessage
 {
     [JsonPropertyName("sender")]
     public string Sender { get; set; } = string.Empty;
+
+    [JsonPropertyName("type")]
+    public string Type { get; set; } = "msg";
+
     [JsonPropertyName("content")]
     public string Content { get; set; } = string.Empty;
+
     [JsonPropertyName("timestamp")]
     public long Timestamp { get; set; }
+
+    [JsonPropertyName("highlightInfo")]
+    public HighlightInfo? HighlightInfo { get; set; }
+}
+
+public class HighlightInfo
+{
+    [JsonPropertyName("logMessageId")]
+    public string LogMessageId { get; set; } = string.Empty;
+
+    [JsonPropertyName("startPosition")]
+    public int StartPosition { get; set; }
+
+    [JsonPropertyName("endPosition")]
+    public int EndPosition { get; set; }
+
+    [JsonPropertyName("highlightId")]
+    public string HighlightId { get; set; } = string.Empty;
+}
+
+public class LogMessage
+{
+    [JsonPropertyName("id")]
+    public string Id { get; set; } = Guid.NewGuid().ToString();
+
+    [JsonPropertyName("content")]
+    public string Content { get; set; } = string.Empty;
+
+    [JsonPropertyName("timestamp")]
+    public long Timestamp { get; set; } = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 } 
