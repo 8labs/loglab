@@ -14,6 +14,7 @@ export default {
     const chatMessages = ref([]);
     const logMessages = ref([]);
     const sessionId = ref("");
+    const highlights = ref([]);
 
     const connectWebSocket = async () => {
       // Get session ID from URL
@@ -75,6 +76,47 @@ export default {
       }
     };
 
+    const handleHighlight = ({ text, highlightId, lineIndex }) => {
+      // Add to highlights array
+      const highlight = {
+        id: highlightId,
+        text,
+        lineIndex,
+        timestamp: Date.now(),
+      };
+      highlights.value.push(highlight);
+
+      // Send system message
+      const message = {
+        sender: "System",
+        content: `Highlighted text: "${text}"`,
+        highlightId,
+        timestamp: Date.now(),
+      };
+
+      if (ws.value && ws.value.readyState === WebSocket.OPEN) {
+        ws.value.send(JSON.stringify(message));
+      }
+    };
+
+    const handleScrollToHighlight = (highlightId) => {
+      const highlight = highlights.value.find((h) => h.id === highlightId);
+      if (highlight) {
+        // Emit event to LogBox to scroll to highlight
+        const logBox = document.querySelector(".log-section");
+        if (logBox) {
+          const element = document.getElementById(highlightId);
+          if (element) {
+            element.scrollIntoView({ behavior: "smooth", block: "center" });
+            element.classList.add("highlight-pulse");
+            setTimeout(() => {
+              element.classList.remove("highlight-pulse");
+            }, 2000);
+          }
+        }
+      }
+    };
+
     onMounted(() => {
       connectWebSocket();
     });
@@ -88,7 +130,10 @@ export default {
     return {
       chatMessages,
       logMessages,
+      highlights,
       handleSendMessage,
+      handleHighlight,
+      handleScrollToHighlight,
     };
   },
 };
@@ -97,8 +142,17 @@ export default {
 <template>
   <div class="app">
     <div class="container">
-      <ChatBox :messages="chatMessages" @send-message="handleSendMessage" />
-      <LogBox :messages="logMessages" />
+      <ChatBox
+        :messages="chatMessages"
+        :highlights="highlights"
+        @send-message="handleSendMessage"
+        @scroll-to-highlight="handleScrollToHighlight"
+      />
+      <LogBox
+        :messages="logMessages"
+        :highlights="highlights"
+        @highlight="handleHighlight"
+      />
     </div>
   </div>
 </template>

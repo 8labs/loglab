@@ -8,8 +8,12 @@ export default {
       type: Array,
       required: true,
     },
+    highlights: {
+      type: Array,
+      required: true,
+    },
   },
-  emits: ["send-message"],
+  emits: ["send-message", "scroll-to-highlight"],
   setup(props, { emit }) {
     const newMessage = ref("");
     const chatMessagesRef = ref(null);
@@ -32,6 +36,25 @@ export default {
       return new Date(timestamp).toLocaleTimeString();
     };
 
+    const handleHighlightClick = (event) => {
+      if (event.target.tagName === "A" && event.target.dataset.highlightId) {
+        event.preventDefault();
+        emit("scroll-to-highlight", event.target.dataset.highlightId);
+      }
+    };
+
+    const formatMessageContent = (message) => {
+      if (message.sender === "System" && message.highlightId) {
+        const highlight = props.highlights.find(
+          (h) => h.id === message.highlightId
+        );
+        if (highlight) {
+          return `${message.content} <a href="#" data-highlight-id="${highlight.id}">[View Highlight]</a>`;
+        }
+      }
+      return message.content;
+    };
+
     onMounted(() => {
       scrollToBottom();
     });
@@ -41,6 +64,8 @@ export default {
       chatMessagesRef,
       sendMessage,
       formatTime,
+      handleHighlightClick,
+      formatMessageContent,
     };
   },
 };
@@ -48,11 +73,15 @@ export default {
 
 <template>
   <div class="chat-section">
-    <div class="chat-messages" ref="chatMessagesRef">
+    <div
+      class="chat-messages"
+      ref="chatMessagesRef"
+      @click="handleHighlightClick"
+    >
       <div v-for="msg in messages" :key="msg.timestamp" class="message">
         <span class="timestamp">{{ formatTime(msg.timestamp) }}</span>
         <span class="sender">{{ msg.sender }}:</span>
-        <span class="content">{{ msg.content }}</span>
+        <span class="content" v-html="formatMessageContent(msg)"></span>
       </div>
     </div>
     <div class="chat-input">
@@ -98,6 +127,15 @@ export default {
 .sender {
   font-weight: bold;
   margin-right: 8px;
+}
+
+:deep(a) {
+  color: #00bfd3;
+  text-decoration: none;
+}
+
+:deep(a:hover) {
+  text-decoration: underline;
 }
 
 .chat-input {
