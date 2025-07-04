@@ -287,7 +287,7 @@ export default {
 }
 
 :deep(.highlight-pulse) {
-  animation: highlight-pulse 2s ease-out;
+  animation: highlight-pulse 4s ease-out;
 }
 
 @keyframes highlight-pulse {

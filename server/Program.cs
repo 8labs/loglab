@@ -44,6 +44,17 @@ app.UseWebSockets(new WebSocketOptions
 var sessions = new ConcurrentDictionary<string, SessionChannels>();
 
 // REST API endpoint for creating a new session
+app.MapGet("/api/rando", () =>
+{
+    List<string> sessionIds = new List<string>();
+    for (int i = 0; i < 25; i++) {
+        var sessionId = SessionIdGenerator.GenerateId();
+        sessionIds.Add(sessionId);
+    }
+    return sessionIds;
+});
+
+// REST API endpoint for creating a new session
 app.MapGet("/api/session", () =>
 {
     var sessionId = SessionIdGenerator.GenerateId();
