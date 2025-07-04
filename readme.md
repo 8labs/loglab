@@ -5,9 +5,7 @@ A lightweight, incident collaboration tool designed to streamline debugging and 
 Pipe or tail from the command line to a browser-based chat where your team can review the output live and collaborate side-by-side.
 
 <!-- Project Demo -->
-<video src="resources/images/8labs-loglabs-poc.mp4" controls width="600">
-  Your browser does not support the video tag.
-</video>
+<img src="resources/images/8labs-loglabs-poc.gif" alt="8labs Loglab Demo" width="600" />
 
 ## Features
 
